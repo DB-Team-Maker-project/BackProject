@@ -45,3 +45,4 @@ class Application(Base):
     __tablename__ = "applications"
     tid = Column(Integer, ForeignKey("teams.tid"), primary_key=True)
     student_id = Column(String, ForeignKey("users.student_id"), primary_key=True)
+    status = Column(Integer, default=0)  # 0: 대기, 1: 수락, 2: 거절
