@@ -111,27 +111,77 @@ def list_teams(pid: int, db: Session = Depends(get_db)):
 
 @app.post("/apply/{student_id}/{tid}")
 def apply_team(student_id: str, tid: int, db: Session = Depends(get_db)):
+    team = db.query(Team).filter_by(tid=tid).first()
+    if team.completed:
+        raise HTTPException(status_code=400, detail="이미 확정된 팀에는 신청할 수 없습니다.")
     if db.query(Application).filter_by(student_id=student_id, tid=tid).first():
         raise HTTPException(status_code=400, detail="이미 지원함")
-    db.add(Application(student_id=student_id, tid=tid))
+    db.add(Application(student_id=student_id, tid=tid, status=0))
     db.commit()
     return {"message": "지원 완료"}
 
+
 @app.post("/accept/{tid}/{student_id}")
 def accept_member(tid: int, student_id: str, db: Session = Depends(get_db)):
+    # 팀 정보 불러오기
     team = db.query(Team).filter_by(tid=tid).first()
     if not team:
         raise HTTPException(status_code=404, detail="팀 없음")
+
+    # 같은 대회에서 이미 수락된 상태인지 확인
+    accepted_app = (
+        db.query(Application)
+        .join(Team, Application.tid == Team.tid)
+        .filter(
+            Application.student_id == student_id,
+            Application.status == 1,
+            Team.pid == team.pid  # 같은 대회 내에서만 확인
+        )
+        .first()
+    )
+    if accepted_app:
+        raise HTTPException(status_code=400, detail="이미 이 대회에서 다른 팀에 수락된 상태입니다.")
+
+    # 수락 처리
     db.add(Member(tid=tid, student_id=student_id))
-    db.query(Application).filter_by(tid=tid, student_id=student_id).delete()
-    db.commit()
-    return {"message": "수락 완료"}
+    application = db.query(Application).filter_by(tid=tid, student_id=student_id).first()
+    if application:
+        application.status = 1  # 수락
+        db.commit()
+        return {"message": "수락 완료"}
+    else:
+        raise HTTPException(status_code=404, detail="신청 내역 없음")
+
 
 @app.delete("/reject/{tid}/{student_id}")
 def reject_member(tid: int, student_id: str, db: Session = Depends(get_db)):
-    db.query(Application).filter_by(tid=tid, student_id=student_id).delete()
-    db.commit()
-    return {"message": "거절 완료"}
+    application = db.query(Application).filter_by(tid=tid, student_id=student_id).first()
+    if application:
+        application.status = 2  # 거절
+        db.commit()
+        return {"message": "거절 완료"}
+    raise HTTPException(status_code=404, detail="신청 내역 없음")
+
+@app.get("/applications/{student_id}")
+def get_my_applications(student_id: str, db: Session = Depends(get_db)):
+    apps = db.query(Application).filter_by(student_id=student_id).all()
+    result = []
+
+    for app in apps:
+        team = db.query(Team).filter_by(tid=app.tid).first()
+        if not team:
+            continue
+        competition = db.query(Competition).filter_by(pid=team.pid).first()
+        leader = db.query(User).filter_by(student_id=team.leader_id).first()
+        result.append({
+            "tid": app.tid,
+            "competition_title": competition.title if competition else None,
+            "team_leader_name": leader.name if leader else None,
+            "status": app.status  # 0: 대기, 1: 수락, 2: 거절
+        })
+
+    return result
+
 
 @app.post("/confirm/{tid}")
 def confirm_team(tid: int, db: Session = Depends(get_db)):
