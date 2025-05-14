@@ -5,6 +5,7 @@ class UserCreate(BaseModel):
     student_id: str
     password: str
     name: str
+    phone_number: str
     languages: str
     mbti: str
     career: str
