@@ -7,6 +7,7 @@ class User(Base):
     student_id = Column(String, primary_key=True)
     password = Column(String, nullable=False)
     name = Column(String)
+    phone_number = Column(String)
     languages = Column(String)
     mbti = Column(String)
     career = Column(String)
