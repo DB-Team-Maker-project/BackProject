@@ -120,6 +120,33 @@ def apply_team(student_id: str, tid: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "지원 완료"}
 
+@app.get("/team/applications/{leader_id}")
+def get_pending_applications_with_user_info(leader_id: str, db: Session = Depends(get_db)):
+    teams = db.query(Team).filter_by(leader_id=leader_id).all()
+    result = []
+
+    for team in teams:
+        # 해당 팀에 들어온 '대기 상태' 신청서만 조회
+        applications = db.query(Application).filter_by(tid=team.tid, status=0).all()
+        for app in applications:
+            user = db.query(User).filter_by(student_id=app.student_id).first()
+            if user:
+                result.append({
+                    "tid": team.tid,
+                    "status": app.status,  # 항상 0
+                    "student_id": user.student_id,
+                    "name": user.name,
+                    "phone_number": user.phone_number,
+                    "languages": user.languages,
+                    "mbti": user.mbti,
+                    "career": user.career,
+                    "gender": user.gender,
+                    "intro": user.intro
+                })
+
+    return result
+
+
 
 @app.post("/accept/{tid}/{student_id}")
 def accept_member(tid: int, student_id: str, db: Session = Depends(get_db)):
