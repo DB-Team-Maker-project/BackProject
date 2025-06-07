@@ -6,7 +6,7 @@ class UserCreate(BaseModel):
     password: str
     name: str
     phone_number: str
-    languages: str
+    main_language: str
     mbti: str
     career: str
     gender: str
