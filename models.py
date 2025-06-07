@@ -5,10 +5,10 @@ from database import Base
 class User(Base):
     __tablename__ = "users"
     student_id = Column(String, primary_key=True)
-    password = Column(String, nullable=False)
+    password = Column(String, nullable=False) 
     name = Column(String)
-    phone_number = Column(String)
-    languages = Column(String)
+    phone_number = Column(String) 
+    main_language = Column(String)
     mbti = Column(String)
     career = Column(String)
     gender = Column(String)
